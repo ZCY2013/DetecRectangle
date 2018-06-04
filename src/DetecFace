@@ -1,0 +1,130 @@
+import org.opencv.core.*;
+import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.objdetect.CascadeClassifier;
+
+import java.sql.SQLOutput;
+import java.util.Vector;
+
+public class DetecFace {
+
+    public  static void main(String[] args)
+    {
+        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        ImgUtilBeta ub = new ImgUtilBeta();
+        String filePath = System.getProperty("user.dir")+"/";
+        String fileName = "test_face.png";
+//        String fileName = "test_sz.jpg";
+//        String fileName = "test.jpg";
+        ub.cut(filePath, fileName);
+    }
+
+    private void cut(String filePath,String fileName){
+        System.out.println(filePath+fileName);
+        Mat src = Imgcodecs.imread(filePath+fileName,3);
+        System.out.println(src.height());
+        System.out.println(src.width());
+        Mat gray = new Mat();
+        Imgproc.cvtColor(src, gray, Imgproc.COLOR_BGR2GRAY);
+        Mat Contrast = new Mat();
+//        Imgproc.equalizeHist(gray, Contrast);
+        Contrast = gray;
+        Imgcodecs.imwrite("increaseContrast.jpg",Contrast);
+        CascadeClassifier eye_Classfier = new CascadeClassifier();
+        CascadeClassifier face_Classfier = new CascadeClassifier();
+
+        if(!eye_Classfier.load("./haarcascade_eye.xml")){
+            System.out.println("Load haarcascade_eye.xml failed");
+            System.exit(0);
+        }
+        if(!face_Classfier.load("./haarcascade_frontalface_alt.xml")){
+            System.out.println("Load haarcascade_frontalface_alt.xml");
+            System.exit(0);
+        }
+
+//        Vector<Rect> eyeRect = new Vector<>();
+//        Vector<Rect> faceRect = new Vector<>();
+        MatOfRect eye_matOfRect = new MatOfRect();
+        MatOfRect face_matOfRect = new MatOfRect();
+        //find eyes
+        eye_Classfier.detectMultiScale(Contrast, eye_matOfRect);//, 1.1, 3,  3, new Size(30, 30), new Size(width, height));
+        System.out.println(eye_matOfRect.size().toString());
+        Point p1 = new Point(eye_matOfRect.get(0, 0));
+        Point p2 = new Point(eye_matOfRect.get(1, 0));
+        Point p3 = new Point(eye_matOfRect.get(2, 0));
+        Point p4 = new Point(eye_matOfRect.get(3, 0));
+        Point p0 = new Point(0,0);
+
+        //find face
+        face_Classfier.detectMultiScale(Contrast, face_matOfRect);//, 1.1, 3,  3, new Size(30, 30), new Size(width, height));
+        System.out.println(face_matOfRect.size().toString());
+        Point pf = new Point(face_matOfRect.get(0, 0));
+
+        System.out.println(p1.toString() + " " + p2.toString() + " " + p3.toString() + " " + p4 + " " + pf);
+
+        Double width = getWild(pf.x, p1.x, p2.x);
+        Double height = getHeight(pf.y, p1.y, p2.y);
+
+        Point init_ps = new Point(pf.x, pf.y - height);
+        Point init_pe = new Point(pf.x + width, pf.y + height*4);
+        System.out.println("ps : " + init_ps.toString() + " pe : " + init_pe.toString());
+        Rect roi = getFinalRect(init_ps, init_pe, src.width() + 0.0, src.height() + 0.0);
+        Mat dst = new Mat(src,roi);
+        Imgcodecs.imwrite("resultFace.jpg", dst);
+//        Imgproc.rectangle(src,roi.br() ,roi.tl(),new Scalar(0,255,0));
+//        Imgcodecs.imwrite("writeRectangle.jpg", src);
+        Imgproc.rectangle(src,roi.br(),roi.tl(),new Scalar(0, 0, 255));
+//        Imgproc.rectangle(src,pf ,p1 ,new Scalar(255, 0, 0));
+//        Imgproc.rectangle(src,p1 ,p2 ,new Scalar(255, 0, 0));
+        Imgcodecs.imwrite("writeRectangle.jpg", src);
+
+    }
+
+    private Double getWild(Double start, Double y1, Double y2){
+        return (y1 + y2 - 2 * start)/2*3;
+    }
+
+    private Double getHeight(Double start, Double y1, Double y2){
+        return ((y1+y2)/2 - start);
+    }
+
+    private Rect getFinalRect(Point initX, Point initY, Double MaxX, Double MaxY){
+        Double x1 = initX.x;
+        Double x2 = initY.x;
+        Double y1 = initX.y;
+        Double y2 = initY.y;
+        Double minx = 0.0;
+        Double miny = 0.0;
+        Double maxX = 0.0;
+        Double maxY = 0.0;
+        if(x1 > x2){
+            if(x2 > 0) minx = x2;
+            else minx = 0.0;
+            if(x1 <MaxX) maxX = x1;
+            else maxX = MaxX;
+        }else{
+            if( x1 > 0 ) minx = x1;
+            else minx = 0.0;
+            if(x2 < MaxX) maxX = x2;
+            else maxX = MaxX;
+        }
+
+        if( y1 > y2){
+            if(y2 > 0) miny = y2;
+            else miny = 0.0;
+            if(y1 < MaxY) maxY = y1;
+            else maxY = MaxY;
+        }else{
+            if(y1 > 0) miny = y1;
+            else miny = 0.0;
+            if(y2 < MaxY) maxY = y2;
+            else maxY = MaxY;
+        }
+        System.out.println(miny);
+        Point ps = new Point(minx, miny);
+        Point pe = new Point(maxX, maxY);
+        System.out.println("Final : " + ps + pe);
+        Rect roi = new Rect(ps, pe);
+        return roi;
+    }
+}
