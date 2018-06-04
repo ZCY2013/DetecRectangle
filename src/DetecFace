@@ -66,7 +66,7 @@ public class DetecFace {
         Double height = getHeight(pf.y, p1.y, p2.y);
 
         Point init_ps = new Point(pf.x, pf.y - height);
-        Point init_pe = new Point(pf.x + width, pf.y + height*4);
+        Point init_pe = new Point(pf.x + width * 3, pf.y + height*4);
         System.out.println("ps : " + init_ps.toString() + " pe : " + init_pe.toString());
         Rect roi = getFinalRect(init_ps, init_pe, src.width() + 0.0, src.height() + 0.0);
         Mat dst = new Mat(src,roi);
@@ -81,7 +81,7 @@ public class DetecFace {
     }
 
     private Double getWild(Double start, Double y1, Double y2){
-        return (y1 + y2 - 2 * start)/2*3;
+        return (y1 + y2 - 2 * start)/2;
     }
 
     private Double getHeight(Double start, Double y1, Double y2){
